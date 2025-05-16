@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>스탯 계산기</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    label { display: block; margin: 5px 0; }
+    #results p { margin: 4px 0; }
+  </style>
+</head>
+<body>
+  <h2>스탯 입력</h2>
+  <form id="statForm">
+    <label>공격력: <input type="number" id="atk" value="0"></label>
+    <label>강타 강화: <input type="number" id="smash" value="0"></label>
+    <label>연타 강화: <input type="number" id="combo" value="0"></label>
+    <label>스킬 위력: <input type="number" id="skill" value="0"></label>
+    <label>광역 강화: <input type="number" id="aoe" value="0"></label>
+    <label>치명타: <input type="number" id="crit" value="0"></label>
+    <label>추가타: <input type="number" id="extra" value="0"></label>
+
+    <label>
+      프리셋 선택:
+      <select id="presetSlot">
+        <option value="1">프리셋 1</option>
+        <option value="2">프리셋 2</option>
+        <option value="3">프리셋 3</option>
+      </select>
+    </label>
+    <button type="submit">저장 및 계산</button>
+    <button type="button" onclick="savePreset()">프리셋 저장</button>
+    <button type="button" onclick="loadPreset()">프리셋 불러오기</button>
+  </form>
+
+  <h2>결과</h2>
+  <div id="results"></div>
+
+  <script>
+    const fields = ["atk", "smash", "combo", "skill", "aoe", "crit", "extra"];
+
+    // 계산 및 출력
+    document.getElementById('statForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const stats = getStats();
+
+      const { 공격력, 강타강화, 연타강화, 스킬위력, 광역강화, 치명타, 추가타 } = stats;
+
+      const 치명타확률 = 30 + 치명타 * 1.5 / 100;
+      const 치명타피해 = 140 + 치명타 * 2 / 100;
+      const 추가타값   = 0.0075 * 추가타;
+
+      const critMultiplier = (치명타확률 * 치명타피해 / 10000 + (100 - 치명타확률) / 100);
+      const base = (a) => (1 + a / 8500) * (1 + 스킬위력 / 8500) * 공격력 * critMultiplier;
+
+      const 강타 = base(강타강화);
+      const 연타 = base(연타강화);
+      const 연타강타 = base(강타강화 + 연타강화);
+      const 광역강타 = base(강타강화 + 광역강화);
+      const 광역연타 = base(연타강화 + 광역강화);
+      const 광역강타연타 = base(강타강화 + 연타강화 + 광역강화);
+
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = `
+        <p>강타: ${강타.toFixed(2)}</p>
+        <p>연타: ${연타.toFixed(2)}</p>
+        <p>연타+강타: ${연타강타.toFixed(2)}</p>
+        <p>광역 강타: ${광역강타.toFixed(2)}</p>
+        <p>광역 연타: ${광역연타.toFixed(2)}</p>
+        <p>광역 강타+연타: ${광역강타연타.toFixed(2)}</p>
+        <p>치명타 확률: ${치명타확률.toFixed(2)}%</p>
+        <p>치명타 피해: ${치명타피해.toFixed(2)}%</p>
+        <p>추가타: ${추가타값.toFixed(2)}%</p>
+      `;
+    });
+
+    // 입력값 가져오기
+    function getStats() {
+      return {
+        공격력: parseFloat(document.getElementById('atk').value) || 0,
+        강타강화: parseFloat(document.getElementById('smash').value) || 0,
+        연타강화: parseFloat(document.getElementById('combo').value) || 0,
+        스킬위력: parseFloat(document.getElementById('skill').value) || 0,
+        광역강화: parseFloat(document.getElementById('aoe').value) || 0,
+        치명타: parseFloat(document.getElementById('crit').value) || 0,
+        추가타: parseFloat(document.getElementById('extra').value) || 0
+      };
+    }
+
+    // 프리셋 저장
+    function savePreset() {
+      const slot = document.getElementById('presetSlot').value;
+      const preset = {};
+      fields.forEach(id => {
+        preset[id] = document.getElementById(id).value;
+      });
+      localStorage.setItem(`presetStats_${slot}`, JSON.stringify(preset));
+      alert(`프리셋 ${slot}번이 저장되었습니다.`);
+    }
+
+    // 프리셋 불러오기
+    function loadPreset() {
+      const slot = document.getElementById('presetSlot').value;
+      const preset = JSON.parse(localStorage.getItem(`presetStats_${slot}`));
+      if (!preset) {
+        alert(`프리셋 ${slot}번이 없습니다.`);
+        return;
+      }
+      fields.forEach(id => {
+        document.getElementById(id).value = preset[id] || 0;
+      });
+      alert(`프리셋 ${slot}번이 불러와졌습니다.`);
+    }
+  </script>
+</body>
+</html>
